@@ -241,14 +241,6 @@ Planned features include:
 - Add database persistence
 - Add scheduled daily summaries
 
-### Phase 6: Testing And Polish
-
-- Add unit tests for decision logic
-- Add backend route tests
-- Add API error handling tests
-- Improve README with screenshots
-- Add deployment instructions
-
 ## Author
 
 Built by Manan as a portfolio project.
