@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { getWeather, searchLocations } from "./services/openMeteoService";
+import { buildWeatherDecision } from "./services/decisionEngine";
 
 const app = express();
 const PORT = 4000;
@@ -41,6 +42,25 @@ app.get("/api/weather", async(req,res)=> {
     } catch(error) {
         res.status(500).json({error: "Failed to fetch weather"});
         console.log(error);
+    }
+});
+
+app.get("/api/decision", async(req, res)=> {
+    try {
+        const latitude = Number(req.query.lat);
+        const longitude = Number(req. query.lon);
+
+        if (Number.isNaN(latitude) || Number.isNaN(longitude)){
+            return res.status(400).json({error: "Valid lat and lon are required"});
+        }
+
+        const weather = await getWeather(latitude, longitude);
+        const decision = buildWeatherDecision(weather);
+
+        res.json(decision);
+    } catch (error){
+        console.log(error);
+        res.status(500).json({ error: "Failed to build weather decision" });
     }
 });
 
