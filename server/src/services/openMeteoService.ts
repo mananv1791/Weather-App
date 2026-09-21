@@ -1,6 +1,16 @@
 import axios from "axios";
+import { cache } from "./cacheService";
 
 export async function searchLocations(query: string){
+    const normalizedQuery = query.trim().toLowerCase();
+    const cacheKey = `locations:${normalizedQuery}`;
+
+    const cachedLocations = cache.get(cacheKey);
+
+    if (cachedLocations) {
+        return cachedLocations;
+    }
+
     const response = await axios.get("https://geocoding-api.open-meteo.com/v1/search", {
         params: {
             name: query,
@@ -20,9 +30,21 @@ export async function searchLocations(query: string){
         latitude:location.latitude,
         longitude:location.longitude
     }));
+
+    cache.set(cacheKey, location, 24*60*60);
+
+    return location;
 }
 
 export async function getWeather(latitude:number, longitude:number){
+    const cacheKey = `weather:${latitude.toFixed(4)}:${longitude.toFixed(4)}`;
+
+    const cacheWeather = cache.get(cacheKey);
+
+    if (cacheWeather) {
+        return cacheWeather;
+    }
+
     const response = await axios.get("https://api.open-meteo.com/v1/forecast", {
         params: {
             latitude,
@@ -47,5 +69,8 @@ export async function getWeather(latitude:number, longitude:number){
             timezone: "auto"
         }
     });
+
+    cache.set(cacheKey, response.data, 10*60);
+
     return response.data;
 }
