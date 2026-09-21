@@ -183,7 +183,7 @@ Returns weather data from Open-Meteo, including:
 
 ## Why This Project Is Different
 
-Most beginner weather apps only display temperature and weather icons. This project is being designed as a decision-focused weather assistant.
+Most weather apps only display temperature and weather icons. This project is being designed as a decision-focused weather assistant.
 
 Planned features include:
 
@@ -232,7 +232,7 @@ Planned features include:
 - Show "today vs yesterday" insights
 - Use multiple data sources through the backend
 
-### Phase 5: Backend Engineering
+### Phase 5: Backend
 
 - Add API rate limiting
 - Add response caching
@@ -249,17 +249,6 @@ Planned features include:
 - Improve README with screenshots
 - Add deployment instructions
 
-## Development Notes
-
-The frontend should call the Express backend instead of calling Open-Meteo directly.
-
-```txt
-React frontend -> Express backend -> Open-Meteo API
-```
-
-This keeps API logic in one place and makes it easier to add caching, rate limiting, logging, and future API integrations.
-
 ## Author
 
-Built by Manan as a full-stack SDE portfolio project.
-
+Built by Manan as a portfolio project.
