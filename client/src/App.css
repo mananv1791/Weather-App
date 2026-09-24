@@ -212,3 +212,114 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.compare-panel {
+  margin-top: 24px;
+}
+
+.location-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.location-result span,
+.location-result small {
+  display: block;
+}
+
+.location-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.location-actions button {
+  padding: 8px 10px;
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.location-actions button:hover {
+  background: #bae6fd;
+}
+
+.compare-selected {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.compare-selected > div {
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.compare-selected strong {
+  display: block;
+  color: #0f172a;
+}
+
+.compare-button {
+  width: 100%;
+}
+
+.comparison-result {
+  margin-top: 20px;
+}
+
+.comparison-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.stat-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+}
+
+.stat-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.stat-list dt {
+  color: #64748b;
+}
+
+.stat-list dd {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .location-result,
+  .location-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .compare-selected,
+  .comparison-cards {
+    grid-template-columns: 1fr;
+  }
+}

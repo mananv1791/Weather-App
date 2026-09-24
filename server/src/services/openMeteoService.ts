@@ -22,7 +22,7 @@ export async function searchLocations(query: string){
     
     const results = response.data.results ?? [];
 
-    return results.map((location: any) => ({
+    const locations = results.map((location: any) => ({
         id: location.id,
         name: location.name,
         country: location.country,
@@ -31,9 +31,9 @@ export async function searchLocations(query: string){
         longitude:location.longitude
     }));
 
-    cache.set(cacheKey, location, 24*60*60);
+    cache.set(cacheKey, locations, 24*60*60);
 
-    return location;
+    return locations;
 }
 
 export async function getWeather(latitude:number, longitude:number){
