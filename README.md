@@ -8,11 +8,16 @@ This project is being built as an SDE portfolio project with a focus on API inte
 
 The project currently includes:
 
-- React + TypeScript frontend scaffolded with Vite
+- React + TypeScript frontend built with Vite
 - Express + TypeScript backend
 - Backend API proxy for Open-Meteo
-- City search using the Open-Meteo Geocoding API
+- Location search using the Open-Meteo Geocoding API
 - Weather forecast retrieval using the Open-Meteo Forecast API
+- Decision engine for umbrella, clothing, outdoor score, and best outdoor time window
+- Smart location comparison using exact latitude/longitude selection
+- Frontend UI for searching locations, selecting exact results, viewing advice, and comparing two places
+- API rate limiting
+- In-memory response caching for weather and geocoding requests
 - Basic health check endpoint
 - Separate `client` and `server` project structure
 
@@ -31,6 +36,8 @@ The project currently includes:
 - TypeScript
 - Axios
 - CORS
+- Express Rate Limit
+- Node Cache
 
 ### External APIs
 
@@ -53,6 +60,9 @@ WEATHER-APP/
     src/
       index.ts
       services/
+        cacheService.ts
+        comparisonService.ts
+        decisionEngine.ts
         openMeteoService.ts
     package.json
     tsconfig.json
@@ -181,65 +191,136 @@ Returns weather data from Open-Meteo, including:
 - Daily high and low temperature
 - Daily precipitation probability
 
+### Get Weather Decision
+
+```http
+GET /api/decision?lat=43.70011&lon=-79.4163
+```
+
+Example:
+
+```txt
+http://localhost:4000/api/decision?lat=43.70011&lon=-79.4163
+```
+
+Returns decision-focused weather advice:
+
+```json
+{
+  "summary": "Decent outdoor conditions with a few things to watch.",
+  "umbrella": {
+    "needed": false,
+    "message": "Umbrella is not needed right now."
+  },
+  "clothing": {
+    "message": "Light jacket or hoodie recommended."
+  },
+  "outdoor": {
+    "score": 75,
+    "bestWindow": "2 PM - 4 PM"
+  },
+  "conditions": {
+    "feelsLike": 12.4,
+    "windSpeed": 18.2,
+    "rainProbability": 10
+  }
+}
+```
+
+### Compare Locations By Coordinates
+
+```http
+GET /api/compare/coordinates
+```
+
+Example:
+
+```txt
+http://localhost:4000/api/compare/coordinates?leftName=Kingston%2C%20Ontario%2C%20Canada&leftLat=44.2312&leftLon=-76.4860&rightName=Morrisburg%2C%20Ontario%2C%20Canada&rightLat=44.8992&rightLon=-75.1854
+```
+
+This endpoint compares exact selected locations instead of guessing from city names. This avoids ambiguity for places such as Kingston, Ontario vs Kingston, Jamaica.
+
+Returns:
+
+- Left location weather decision summary
+- Right location weather decision summary
+- Outdoor score comparison
+- Rain, wind, and feels-like comparison
+- Recommended winner with explanation
+
 ## Why This Project Is Different
 
 Most weather apps only display temperature and weather icons. This project is being designed as a decision-focused weather assistant.
 
-Planned features include:
+Built features include:
 
 - Umbrella recommendation
 - Clothing recommendation
 - Best time to go outside
 - Outdoor activity score
 - City-to-city weather comparison
+- Rate limiting
+- Caching
+
+Planned features include:
+
 - Air quality insights
 - Favorite locations
 - Search history
-- Rate limiting
-- Caching
 - Scheduled daily weather summary
 
 ## Planned Roadmap
 
 ### Phase 1: Core Weather App
 
-- Search for a city
-- Fetch weather by latitude and longitude
-- Display current weather
-- Display hourly forecast
-- Display daily forecast
-- Add loading and error states
+- [x] Search for a city
+- [x] Select the exact matching location
+- [x] Fetch weather by latitude and longitude
+- [x] Add loading and error states
 
 ### Phase 2: Decision Engine
 
-- Generate umbrella recommendations
-- Generate clothing suggestions
-- Calculate outdoor comfort score
-- Find the best outdoor time window
-- Convert raw weather data into human-friendly advice
+- [x] Generate umbrella recommendations
+- [x] Generate clothing suggestions
+- [x] Calculate outdoor comfort score
+- [x] Find the best outdoor time window
+- [x] Convert raw weather data into human-friendly advice
+- [x] Display decision cards in the frontend
 
 ### Phase 3: Smart Comparisons
 
-- Compare two cities
-- Recommend the better city for outdoor plans
-- Compare rain risk, temperature, wind, and comfort score
-- Display a clear winner with a reason
+- [x] Compare two selected locations
+- [x] Compare by coordinates to avoid ambiguous city names
+- [x] Recommend the better location for outdoor plans
+- [x] Compare rain risk, temperature, wind, and comfort score
+- [x] Display a clear winner with a reason
 
 ### Phase 4: Multiple Free APIs
 
-- Add Open-Meteo Air Quality API
-- Add historical weather comparison
-- Show "today vs yesterday" insights
-- Use multiple data sources through the backend
+- [ ] Add Open-Meteo Air Quality API
+- [ ] Add historical weather comparison
+- [ ] Show "today vs yesterday" insights
+- [ ] Use multiple data sources through the backend
 
 ### Phase 5: Backend
 
-- Add API rate limiting
-- Add response caching
-- Add favorite locations
-- Add search history
-- Add database persistence
-- Add scheduled daily summaries
+- [x] Add API rate limiting
+- [x] Add response caching
+- [ ] Add database persistence
+- [ ] Add favorite locations
+- [ ] Add search history
+- [ ] Add scheduled daily summaries
+
+## Frontend Workflow
+
+The current frontend supports:
+
+1. Search for a location.
+2. Choose the exact result from Open-Meteo geocoding.
+3. Click `Advice` to use that location for weather recommendations.
+4. Click `A` and `B` to choose two locations for comparison.
+5. Compare selected locations and view the winner with supporting weather metrics.
 
 ## Author
 
