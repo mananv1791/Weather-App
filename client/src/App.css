@@ -118,9 +118,13 @@ button:disabled {
 
 .hero-section {
   display: block;
-  text-align: center;
+  text-align: left;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--line-strong);
+}
+
+.has-weather .hero-section {
+  padding-bottom: 14px;
 }
 
 .eyebrow,
@@ -148,18 +152,31 @@ h1 {
   text-align: center;
 }
 
+.has-weather h1 {
+  max-width: none;
+  margin: 0;
+  font-size: clamp(22px, 3vw, 38px);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-align: left;
+}
+
 .hero-copy {
   max-width: 620px;
   margin: 18px auto 0;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
-  text-align: center;
+  text-align: left;
 }
 
 .panel {
   padding: 24px 0;
   border-bottom: 1px solid var(--line-strong);
+}
+
+.has-weather .panel {
+  padding: 18px 0;
 }
 
 .panel h2 {
@@ -186,6 +203,11 @@ input {
   font-size: clamp(28px, 5vw, 52px);
   font-weight: 800;
   letter-spacing: -0.06em;
+}
+
+.has-weather input {
+  padding-bottom: 8px;
+  font-size: clamp(24px, 3vw, 42px);
 }
 
 input::placeholder {
@@ -223,6 +245,10 @@ input:focus {
   align-items: center;
   padding: 15px 0;
   border-bottom: 1px solid var(--line);
+}
+
+.location-result.is-highlighted {
+  background: #eeeeeb;
 }
 
 .location-result span {
@@ -329,6 +355,14 @@ input:focus {
   letter-spacing: -0.08em;
   line-height: 0.95;
   font-variant-numeric: slashed-zero tabular-nums;
+}
+
+.has-weather .decision-card h3 {
+  font-size: clamp(24px, 3.5vw, 44px);
+}
+
+.has-weather .decision-card-wide h3 {
+  font-size: clamp(30px, 4vw, 52px);
 }
 
 .decision-card p {

@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useState } from "react";
 import "./App.css";
 
 type Location = {
@@ -75,6 +75,9 @@ type ActivePage = "weather" | "compare";
 function App() {
   const [query, setQuery] = useState("");
   const [locations, setLocations] = useState<Location[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [highlightedLocationIndex, setHighlightedLocationIndex] = useState(0);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState("");
@@ -139,6 +142,8 @@ function App() {
 
       const data = await response.json();
       setLocations(data);
+      setShowSuggestions(true);
+      setHighlightedLocationIndex(0);
     } catch (err) {
       setError("Could not search locations. Make sure the backend is running.");
     } finally {
@@ -149,19 +154,49 @@ function App() {
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!query.trim()) {
-      setError("Please enter a city name.");
+    if (showSuggestions && locations.length > 0) {
+      handleLocationSelect(locations[highlightedLocationIndex] ?? locations[0]);
       return;
     }
 
-    searchLocations();
+    setShowSuggestions(false);
+    setIsSearchActive(false);
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions || locations.length === 0) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setHighlightedLocationIndex((currentIndex) =>
+        currentIndex >= locations.length - 1 ? 0 : currentIndex + 1
+      );
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setHighlightedLocationIndex((currentIndex) =>
+        currentIndex <= 0 ? locations.length - 1 : currentIndex - 1
+      );
+    }
+
+    if (event.key === "Escape") {
+      setShowSuggestions(false);
+    }
   }
 
   useEffect(() => {
     const trimmedQuery = query.trim();
 
+    if (!isSearchActive) {
+      return;
+    }
+
     if (trimmedQuery.length < 2) {
       setLocations([]);
+      setShowSuggestions(false);
       return;
     }
 
@@ -170,7 +205,7 @@ function App() {
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [query]);
+  }, [query, isSearchActive]);
 
   async function loadWeatherAdviceForLocation(location: Location) {
     try {
@@ -284,12 +319,20 @@ function App() {
     setDecision(null);
     setModelComparison(null);
     setSelectedModel(null);
+    setLocations([]);
+    setShowSuggestions(false);
+    setIsSearchActive(false);
+    setQuery(getLocationLabel(location));
     loadWeatherAdviceForLocation(location);
     compareForecastModelsForLocation(location);
   }
 
   function selectComparisonLocation(location: Location) {
     setComparison(null);
+    setLocations([]);
+    setShowSuggestions(false);
+    setIsSearchActive(false);
+    setQuery(getLocationLabel(location));
 
     if (!leftCompare) {
       setLeftCompare(location);
@@ -360,13 +403,15 @@ function App() {
         )}
       </aside>
 
-      <div className="main-content">
+      <div className={selectedLocation ? "main-content has-weather" : "main-content"}>
       <section className="hero-section">
         <p className="eyebrow">Weather Decision Assistant</p>
         <h1>Weather model intelligence for daily decisions.</h1>
-        <p className="hero-copy">
-          Search a location, choose the exact city, and get practical weather advice.
-        </p>
+        {!selectedLocation && (
+          <p className="hero-copy">
+            Search a location, choose the exact city, and get practical weather advice.
+          </p>
+        )}
       </section>
 
       <section id="weather" className="panel">
@@ -375,7 +420,24 @@ function App() {
         <form className="search-row" onSubmit={handleSearchSubmit}>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setIsSearchActive(true);
+              setQuery(event.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => {
+              if (query.trim().length >= 2) {
+                setIsSearchActive(true);
+                setShowSuggestions(locations.length > 0);
+              }
+            }}
+            onBlur={() => {
+              window.setTimeout(() => {
+                setShowSuggestions(false);
+                setIsSearchActive(false);
+              }, 150);
+            }}
+            onKeyDown={handleSearchKeyDown}
             placeholder="Search city, e.g. Kingston"
           />
           <button type="submit" disabled={isSearching}>
@@ -385,9 +447,15 @@ function App() {
 
         {error && <p className="error-text">{error}</p>}
 
+        {showSuggestions && (
         <div className="results-list">
-          {locations.map((location) => (
-            <div key={location.id} className="location-result">
+          {locations.map((location, index) => (
+            <div
+              key={location.id}
+              className={`location-result ${
+                index === highlightedLocationIndex ? "is-highlighted" : ""
+              }`}
+            >
               <div>
                 <span>{location.name}</span>
                 <small>
@@ -412,6 +480,7 @@ function App() {
             </div>
           ))}
         </div>
+        )}
 
         {activePage === "weather" && selectedLocation && (
           <div className="selected-location">
