@@ -16,6 +16,7 @@ The project currently includes:
 - Decision engine for umbrella, clothing, outdoor score, and best outdoor time window
 - Smart location comparison using exact latitude/longitude selection
 - Frontend UI for searching locations, selecting exact results, viewing advice, and comparing two places
+- Clarity-style dashboard UI with left navigation, exact-place search results, forecast source cards, and hourly weather view
 - API rate limiting
 - In-memory response caching for weather and geocoding requests
 - Basic health check endpoint
@@ -260,6 +261,8 @@ Built features include:
 - Best time to go outside
 - Outdoor activity score
 - City-to-city weather comparison
+- Forecast model selection so users can choose the source that feels most accurate locally
+- Hourly forecast display for temperature, rain risk, and wind
 - Rate limiting
 - Caching
 
@@ -298,6 +301,8 @@ Planned features include:
 
 ### Phase 4: Multiple Free APIs
 
+- [x] Compare Open-Meteo forecast models
+- [x] Let users choose the forecast source for hourly weather
 - [ ] Add Open-Meteo Air Quality API
 - [ ] Add historical weather comparison
 - [ ] Show "today vs yesterday" insights
@@ -318,9 +323,10 @@ The current frontend supports:
 
 1. Search for a location.
 2. Choose the exact result from Open-Meteo geocoding.
-3. Click `Advice` to use that location for weather recommendations.
-4. Click `A` and `B` to choose two locations for comparison.
-5. Compare selected locations and view the winner with supporting weather metrics.
+3. View decision-focused weather advice for the selected place.
+4. Compare Best Match, ECMWF IFS, and NOAA GFS forecast sources.
+5. Choose one forecast source to view an hourly temperature, rain, and wind forecast.
+6. Use the Cities page to choose two exact locations and compare the better place for outdoor plans.
 
 ## Author
 

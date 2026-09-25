@@ -98,6 +98,25 @@ function App() {
     }`;
   }
 
+  function getRegionLabel(location: Location) {
+    return location.admin1
+      ? `${location.admin1}, ${location.country}`
+      : location.country || "Region unavailable";
+  }
+
+  function getCountryCode(location: Location) {
+    if (!location.country) {
+      return "—";
+    }
+
+    return location.country.slice(0, 2).toUpperCase();
+  }
+
+  function formatCoordinate(value: number, positiveDirection: string, negativeDirection: string) {
+    const direction = value >= 0 ? positiveDirection : negativeDirection;
+    return `${Math.abs(value).toFixed(2)}° ${direction}`;
+  }
+
   function formatHour(time: string) {
     return new Date(time).toLocaleTimeString([], {
       hour: "numeric",
@@ -368,48 +387,72 @@ function App() {
     setComparison(null);
   }
 
+  const selectedForecast = getSelectedModelForecast();
+
   return (
     <main className="app-shell">
       <aside className="side-nav">
-        <button
-          className={activePage === "weather" ? "is-active" : ""}
-          onClick={() => setActivePage("weather")}
-        >
-          Weather
-        </button>
-        <button
-          className={activePage === "compare" ? "is-active" : ""}
-          onClick={() => setActivePage("compare")}
-        >
-          Cities
-        </button>
-        <span>Sources</span>
-        {modelComparison ? (
-          modelComparison.models.map((model) => (
-            <button
-              key={model.model}
-              className={selectedModel === model.model ? "is-active" : ""}
-              onClick={() => setSelectedModel(model.model)}
-            >
-              {model.label}
-            </button>
-          ))
-        ) : (
-          <>
-            <button disabled>Best Match</button>
-            <button disabled>ECMWF</button>
-            <button disabled>GFS</button>
-          </>
-        )}
+        <div className="brand">
+          <span className="brand-mark">☼</span>
+          <strong>Clarity</strong>
+        </div>
+
+        <nav className="nav-links" aria-label="Primary">
+          <button
+            className={activePage === "weather" ? "is-active" : ""}
+            onClick={() => setActivePage("weather")}
+          >
+            <span className="nav-icon">☁</span>
+            Weather
+          </button>
+          <button
+            className={activePage === "compare" ? "is-active" : ""}
+            onClick={() => setActivePage("compare")}
+          >
+            <span className="nav-icon">⌖</span>
+            Cities
+          </button>
+          <span className="nav-muted">
+            <span className="nav-icon">▱</span>
+            Sources
+          </span>
+        </nav>
+
+        <div className="model-nav">
+          <span className="nav-section-title">Models</span>
+          {modelComparison ? (
+            modelComparison.models.map((model, index) => (
+              <button
+                key={model.model}
+                className={selectedModel === model.model ? "is-active" : ""}
+                onClick={() => setSelectedModel(model.model)}
+              >
+                <span className={`model-dot model-dot-${index}`} />
+                {model.label}
+              </button>
+            ))
+          ) : (
+            <>
+              <button disabled><span className="model-dot model-dot-0" />Best Match</button>
+              <button disabled><span className="model-dot model-dot-1" />ECMWF IFS</button>
+              <button disabled><span className="model-dot model-dot-2" />NOAA GFS</button>
+            </>
+          )}
+        </div>
+
+        <div className="status-card">
+          <span>System Status</span>
+          <strong><i />Models updated 4m ago</strong>
+        </div>
       </aside>
 
       <div className={selectedLocation ? "main-content has-weather" : "main-content"}>
       <section className="hero-section">
-        <p className="eyebrow">Weather Decision Assistant</p>
+        <p className="eyebrow"><span />Weather Decision Assistant</p>
         <h1>Weather model intelligence for daily decisions.</h1>
         {!selectedLocation && (
           <p className="hero-copy">
-            Search a location, choose the exact city, and get practical weather advice.
+            Search a location, choose the exact city, and get practical weather advice — compared across forecast models.
           </p>
         )}
       </section>
@@ -418,6 +461,7 @@ function App() {
         <h2>{activePage === "weather" ? "Search Weather Location" : "Search Cities To Compare"}</h2>
 
         <form className="search-row" onSubmit={handleSearchSubmit}>
+          <span className="search-icon">⌕</span>
           <input
             value={query}
             onChange={(event) => {
@@ -440,6 +484,7 @@ function App() {
             onKeyDown={handleSearchKeyDown}
             placeholder="Search city, e.g. Kingston"
           />
+          <span className="shortcut">⌘K</span>
           <button type="submit" disabled={isSearching}>
             {isSearching ? "Searching..." : "Search"}
           </button>
@@ -449,6 +494,10 @@ function App() {
 
         {showSuggestions && (
         <div className="results-list">
+          <div className="results-header">
+            <span>{locations.length} locations match “{query}”</span>
+            <span>Select the exact place</span>
+          </div>
           {locations.map((location, index) => (
             <div
               key={location.id}
@@ -456,20 +505,22 @@ function App() {
                 index === highlightedLocationIndex ? "is-highlighted" : ""
               }`}
             >
-              <div>
+              <span className="result-badge">{getCountryCode(location)}</span>
+              <div className="result-main">
                 <span>{location.name}</span>
-                <small>
-                  {location.admin1 ? `${location.admin1}, `: ""}
-                  {location.country}
-                </small>
+                <small>{getRegionLabel(location)}</small>
               </div>
+              <span className="result-coordinates">
+                {formatCoordinate(location.latitude, "N", "S")} ·{" "}
+                {formatCoordinate(location.longitude, "E", "W")}
+              </span>
 
               <div className="location-actions">
                 <button
                   onClick={() => handleLocationSelect(location)}
                 >
                   {activePage === "weather"
-                    ? "Show Weather"
+                    ? "Show weather →"
                     : !leftCompare
                       ? "Set A"
                       : !rightCompare
@@ -485,7 +536,7 @@ function App() {
         {activePage === "weather" && selectedLocation && (
           <div className="selected-location">
             <div>
-              Selected:{" "}
+              <span>Selected Location</span>
               <strong>
                 {selectedLocation.name}
                 {selectedLocation.admin1 ? `, ${selectedLocation.admin1}` : ""},{" "}
@@ -512,29 +563,53 @@ function App() {
               {activePage === "weather" && decision && (
         <div className="decision-grid">
           <article className="decision-card decision-card-wide">
-            <span className="card-label">Summary</span>
+            <span className="pill-label">● Summary</span>
             <h3>{decision.summary}</h3>
+            <dl className="metric-row">
+              <div>
+                <dt>Feels like</dt>
+                <dd>{decision.conditions.feelsLike}°C</dd>
+              </div>
+              <div>
+                <dt>Rain risk</dt>
+                <dd>{decision.conditions.rainProbability}%</dd>
+              </div>
+              <div>
+                <dt>Wind</dt>
+                <dd>{decision.conditions.windSpeed} km/h</dd>
+              </div>
+              <div>
+                <dt>Best window</dt>
+                <dd>{decision.outdoor.bestWindow}</dd>
+              </div>
+            </dl>
+          </article>
+
+          <article className="decision-card score-card">
+            <span className="card-label">Outdoor Score</span>
+            <div className="score-ring">
+              <strong>{decision.outdoor.score}</strong>
+              <small>/100</small>
+            </div>
+            <p>Ideal from {decision.outdoor.bestWindow}</p>
           </article>
 
           <article className="decision-card">
+            <span className="card-icon">☂</span>
             <span className="card-label">Umbrella</span>
             <h3>{decision.umbrella.needed ? "Bring one" : "Not needed"}</h3>
             <p>{decision.umbrella.message}</p>
           </article>
 
           <article className="decision-card">
+            <span className="card-icon">♙</span>
             <span className="card-label">Clothing</span>
-            <h3>What to wear</h3>
+            <h3>Light layers</h3>
             <p>{decision.clothing.message}</p>
           </article>
 
           <article className="decision-card">
-            <span className="card-label">Outdoor Score</span>
-            <h3>{decision.outdoor.score}/100</h3>
-            <p>Best window: {decision.outdoor.bestWindow}</p>
-          </article>
-
-          <article className="decision-card">
+            <span className="card-icon">♧</span>
             <span className="card-label">Current Conditions</span>
             <h3>{decision.conditions.feelsLike}°C feels like</h3>
             <p>
@@ -560,41 +635,54 @@ function App() {
           <div className="model-summary-grid source-picker">
             {modelComparison.models.map((model) => (
               <button
-                key={model.model}
+              key={model.model}
                 className={`source-card ${selectedModel === model.model ? "is-active" : ""}`}
                 onClick={() => setSelectedModel(model.model)}
               >
-                <span className="card-label">
-                  {model.label}
+                <span className="source-card-top">
+                  <span>
+                    <i />
+                    <strong>{model.label}</strong>
+                    <small>
+                      {model.model === "best_match"
+                        ? "Blended · auto-selected"
+                        : model.model.includes("ecmwf")
+                          ? "European model"
+                          : "US global model"}
+                    </small>
+                  </span>
+                  <em />
                 </span>
-                <h3>{model.hourly.temperature[0]}°C now</h3>
+                <h3>{model.hourly.temperature[0]}° <small>now</small></h3>
                 <p>
-                  Rain: {model.hourly.precipitationProbability[0]}% | Wind:{" "}
+                  Rain {model.hourly.precipitationProbability[0]}% <span /> Wind{" "}
                   {model.hourly.windSpeed[0]} km/h
                 </p>
               </button>
             ))}
           </div>
           
-          {getSelectedModelForecast() ? (
+          {selectedForecast ? (
             <div className="hourly-strip-wrapper">
               <div className="hourly-strip-heading">
-                <span className="card-label">
-                  {getSelectedModelForecast()?.label} hourly forecast
+                <span>
+                  <i /> {selectedForecast.label} · Hourly forecast
                 </span>
+                <div className="forecast-tabs">
+                  <button className="is-active">Temperature</button>
+                  <button>Rain</button>
+                  <button>Wind</button>
+                </div>
               </div>
 
               <div className="hourly-strip">
-                {getSelectedModelForecast()?.hourly.time.map((time, index) => {
-                  const model = getSelectedModelForecast();
-                  if (!model) return null;
-
-                  const rainProbability = model.hourly.precipitationProbability[index];
-                  const windSpeed = model.hourly.windSpeed[index];
-                  const temperature = model.hourly.temperature[index];
+                {selectedForecast.hourly.time.slice(0, 12).map((time, index) => {
+                  const rainProbability = selectedForecast.hourly.precipitationProbability[index];
+                  const windSpeed = selectedForecast.hourly.windSpeed[index];
+                  const temperature = selectedForecast.hourly.temperature[index];
 
                   return (
-                    <article key={time} className="hourly-pill">
+                    <article key={time} className={index === 0 ? "hourly-pill is-current" : "hourly-pill"}>
                       <span>{formatHour(time)}</span>
                       <strong>
                         {getWeatherSymbol(rainProbability, windSpeed, temperature)}
