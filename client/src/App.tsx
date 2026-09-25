@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import "./App.css";
 
 type Location = {
@@ -46,12 +46,31 @@ type ComparedCity = {
 
 type ComparisonResult = {
   left: ComparedCity;
-  rght: ComparedCity;
+  right: ComparedCity;
   winner: {
     name: string;
     reason: string;
   };
 };
+
+type ModelForecast = {
+  model: string;
+  label: string;
+  hourly: {
+    time: string[];
+    temperature: number[];
+    precipitationProbability: number[];
+    windSpeed: number[];
+  };
+};
+
+type ModelComparison = {
+  latitude: number;
+  longitude: number;
+  models: ModelForecast[];
+};
+
+type ActivePage = "weather" | "compare";
 
 function App() {
   const [query, setQuery] = useState("");
@@ -65,6 +84,10 @@ function App() {
   const [rightCompare, setRightCompare] = useState<Location | null>(null);
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState(false);
+  const [modelComparison, setModelComparison] = useState<ModelComparison | null>(null);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<ActivePage>("weather");
 
   function getLocationLabel(location: Location){
     return `${location.name}${location.admin1 ? `, ${location.admin1}` : ""}, ${
@@ -72,9 +95,33 @@ function App() {
     }`;
   }
 
-  async function searchLocations() {
-    if (!query.trim()) {
-      setError("Please enter a city name.");
+  function formatHour(time: string) {
+    return new Date(time).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit"
+    });
+  }
+
+  function getSelectedModelForecast() {
+    if (!modelComparison || !selectedModel) {
+      return null;
+    }
+
+    return modelComparison.models.find((model) => model.model === selectedModel) ?? null;
+  }
+
+  function getWeatherSymbol(rainProbability: number, windSpeed: number, temperature: number) {
+    if (rainProbability >= 50) return "◌";
+    if (windSpeed >= 25) return "∿";
+    if (temperature <= 0) return "◇";
+    return "○";
+  }
+
+  async function searchLocations(searchTerm = query) {
+    const trimmedQuery = searchTerm.trim();
+
+    if (!trimmedQuery) {
+      setLocations([]);
       return;
     }
 
@@ -83,7 +130,7 @@ function App() {
       setError("");
 
       const response = await fetch(
-        `http://localhost:4000/api/locations/search?q=${encodeURIComponent(query)}`
+        `http://localhost:4000/api/locations/search?q=${encodeURIComponent(trimmedQuery)}`
       );
 
       if (!response.ok) {
@@ -99,18 +146,39 @@ function App() {
     }
   }
 
-  async function getWeatherAdvice() {
-    if (!selectedLocation) {
-      setError("Please select a location first.");
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!query.trim()) {
+      setError("Please enter a city name.");
       return;
     }
 
+    searchLocations();
+  }
+
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+
+    if (trimmedQuery.length < 2) {
+      setLocations([]);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      searchLocations(trimmedQuery);
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [query]);
+
+  async function loadWeatherAdviceForLocation(location: Location) {
     try {
       setIsLoadingDecision(true);
       setError("");
 
       const response = await fetch(
-        `http://localhost:4000/api/decision?lat=${selectedLocation.latitude}&lon=${selectedLocation.longitude}`
+        `http://localhost:4000/api/decision?lat=${location.latitude}&lon=${location.longitude}`
       );
 
       if (!response.ok) {
@@ -126,23 +194,63 @@ function App() {
     }
   }
 
-  async function compareSelectedLocations() {
-    if(!leftCompare || !rightCompare){
-      setError("Please choose both comparison locatons.");
+  async function getWeatherAdvice() {
+    if (!selectedLocation) {
+      setError("Please select a location first.");
       return;
     }
 
+    loadWeatherAdviceForLocation(selectedLocation);
+  }
+
+  async function compareForecastModelsForLocation(location: Location) {
+    try {
+      setIsLoadingModels(true);
+      setError("");
+
+      const models = [
+        "best_match",
+        "ecmwf_ifs",
+        "ncep_gfs_global"
+      ].join(",");
+
+      const response = await fetch(`http://localhost:4000/api/models/compare?lat=${location.latitude}&lon=${location.longitude}&models=${models}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to compare forecast models.");
+      }
+
+      const data = await response.json();
+      setModelComparison(data);
+      setSelectedModel(null);
+    } catch (err) {
+      setError("Could not compare forecast models.");
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }
+
+  async function compareForecastModels(){
+    if(!selectedLocation){
+      setError("Please select a location first.");
+      return;
+    }
+
+    compareForecastModelsForLocation(selectedLocation);
+  }
+
+  async function compareLocations(left: Location, right: Location) {
     try {
       setIsComparing(true);
       setError("");
 
       const params = new URLSearchParams({
-        leftName: getLocationLabel(leftCompare),
-        leftLat: String(leftCompare.latitude),
-        leftLon: String(leftCompare.longitude),
-        rightName: getLocationLabel(rightCompare),
-        rightLat: String(rightCompare.latitude),
-        rightLon: String(rightCompare.longitude)
+        leftName: getLocationLabel(left),
+        leftLat: String(left.latitude),
+        leftLon: String(left.longitude),
+        rightName: getLocationLabel(right),
+        rightLat: String(right.latitude),
+        rightLon: String(right.longitude)
       });
 
       const response = await fetch(
@@ -162,35 +270,124 @@ function App() {
     }
   }
 
+  async function compareSelectedLocations() {
+    if(!leftCompare || !rightCompare){
+      setError("Please choose both comparison locations.");
+      return;
+    }
+
+    compareLocations(leftCompare, rightCompare);
+  }
+
+  function selectWeatherLocation(location: Location) {
+    setSelectedLocation(location);
+    setDecision(null);
+    setModelComparison(null);
+    setSelectedModel(null);
+    loadWeatherAdviceForLocation(location);
+    compareForecastModelsForLocation(location);
+  }
+
+  function selectComparisonLocation(location: Location) {
+    setComparison(null);
+
+    if (!leftCompare) {
+      setLeftCompare(location);
+      return;
+    }
+
+    if (!rightCompare) {
+      setRightCompare(location);
+      compareLocations(leftCompare, location);
+      return;
+    }
+
+    setRightCompare(location);
+    compareLocations(leftCompare, location);
+  }
+
+  function handleLocationSelect(location: Location) {
+    if (activePage === "weather") {
+      selectWeatherLocation(location);
+      return;
+    }
+
+    selectComparisonLocation(location);
+  }
+
+  function removeCompareLocation(slot: "left" | "right") {
+    if (slot === "left") {
+      setLeftCompare(null);
+    } else {
+      setRightCompare(null);
+    }
+
+    setComparison(null);
+  }
+
   return (
     <main className="app-shell">
+      <aside className="side-nav">
+        <button
+          className={activePage === "weather" ? "is-active" : ""}
+          onClick={() => setActivePage("weather")}
+        >
+          Weather
+        </button>
+        <button
+          className={activePage === "compare" ? "is-active" : ""}
+          onClick={() => setActivePage("compare")}
+        >
+          Cities
+        </button>
+        <span>Sources</span>
+        {modelComparison ? (
+          modelComparison.models.map((model) => (
+            <button
+              key={model.model}
+              className={selectedModel === model.model ? "is-active" : ""}
+              onClick={() => setSelectedModel(model.model)}
+            >
+              {model.label}
+            </button>
+          ))
+        ) : (
+          <>
+            <button disabled>Best Match</button>
+            <button disabled>ECMWF</button>
+            <button disabled>GFS</button>
+          </>
+        )}
+      </aside>
+
+      <div className="main-content">
       <section className="hero-section">
         <p className="eyebrow">Weather Decision Assistant</p>
-        <h1>Plan your day with weather that makes decisions easier.</h1>
+        <h1>Weather model intelligence for daily decisions.</h1>
         <p className="hero-copy">
           Search a location, choose the exact city, and get practical weather advice.
         </p>
       </section>
 
-      <section className="panel">
-        <h2>Search Location</h2>
+      <section id="weather" className="panel">
+        <h2>{activePage === "weather" ? "Search Weather Location" : "Search Cities To Compare"}</h2>
 
-        <div className="search-row">
+        <form className="search-row" onSubmit={handleSearchSubmit}>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search city, e.g. Kingston"
           />
-          <button onClick={searchLocations} disabled={isSearching}>
+          <button type="submit" disabled={isSearching}>
             {isSearching ? "Searching..." : "Search"}
           </button>
-        </div>
+        </form>
 
         {error && <p className="error-text">{error}</p>}
 
         <div className="results-list">
           {locations.map((location) => (
-            <div key={location.id} className="location.id">
+            <div key={location.id} className="location-result">
               <div>
                 <span>{location.name}</span>
                 <small>
@@ -201,37 +398,22 @@ function App() {
 
               <div className="location-actions">
                 <button
-                  onClick={() => {
-                    setSelectedLocation(location);
-                    setDecision(null);
-                  }}
+                  onClick={() => handleLocationSelect(location)}
                 >
-                  Advice
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLeftCompare(location);
-                    setComparison(null);
-                  }}
-                >
-                  A
-                </button>
-
-                <button
-                  onClick={() => {
-                    setRightCompare(location);
-                    setComparison(null);
-                  }}
-                >
-                  B
+                  {activePage === "weather"
+                    ? "Show Weather"
+                    : !leftCompare
+                      ? "Set A"
+                      : !rightCompare
+                        ? "Set B"
+                        : "Replace B"}
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        {selectedLocation && (
+        {activePage === "weather" && selectedLocation && (
           <div className="selected-location">
             <div>
               Selected:{" "}
@@ -249,10 +431,16 @@ function App() {
             >
               {isLoadingDecision ? "Loading advice..." : "Get Weather Advice"}
             </button>
+            <button className="secondary-button"
+              onClick={compareForecastModels}
+              disabled={isLoadingModels}
+            >
+              {isLoadingModels ? "Loading sources..." : "Refresh Sources"}
+            </button>
           </div>
         )}
 
-              {decision && (
+              {activePage === "weather" && decision && (
         <div className="decision-grid">
           <article className="decision-card decision-card-wide">
             <span className="card-label">Summary</span>
@@ -288,8 +476,77 @@ function App() {
         </div>
       )}
 
+      {activePage === "weather" && modelComparison && (
+        <div className="model-panel">
+          <div className="model-panel-header">
+            <div>
+              <h2>Choose Forecast Source</h2>
+              <p>
+                Select the model that feels closest to your current conditions. The hourly view will use only that source for{" "}
+                {selectedLocation ? getLocationLabel(selectedLocation) : "this location"}.
+              </p>
+            </div>
+          </div>
+
+          <div className="model-summary-grid source-picker">
+            {modelComparison.models.map((model) => (
+              <button
+                key={model.model}
+                className={`source-card ${selectedModel === model.model ? "is-active" : ""}`}
+                onClick={() => setSelectedModel(model.model)}
+              >
+                <span className="card-label">
+                  {model.label}
+                </span>
+                <h3>{model.hourly.temperature[0]}°C now</h3>
+                <p>
+                  Rain: {model.hourly.precipitationProbability[0]}% | Wind:{" "}
+                  {model.hourly.windSpeed[0]} km/h
+                </p>
+              </button>
+            ))}
+          </div>
+          
+          {getSelectedModelForecast() ? (
+            <div className="hourly-strip-wrapper">
+              <div className="hourly-strip-heading">
+                <span className="card-label">
+                  {getSelectedModelForecast()?.label} hourly forecast
+                </span>
+              </div>
+
+              <div className="hourly-strip">
+                {getSelectedModelForecast()?.hourly.time.map((time, index) => {
+                  const model = getSelectedModelForecast();
+                  if (!model) return null;
+
+                  const rainProbability = model.hourly.precipitationProbability[index];
+                  const windSpeed = model.hourly.windSpeed[index];
+                  const temperature = model.hourly.temperature[index];
+
+                  return (
+                    <article key={time} className="hourly-pill">
+                      <span>{formatHour(time)}</span>
+                      <strong>
+                        {getWeatherSymbol(rainProbability, windSpeed, temperature)}
+                      </strong>
+                      <b>{temperature}°</b>
+                      <small>Rain {rainProbability}%</small>
+                      <small>Wind {windSpeed} km/h</small>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="source-empty">Choose a forecast source to show the hourly forecast.</p>
+          )}
+        </div>
+      )}
+
       </section>
-      <section className="panel compare-panel">
+      {activePage === "compare" && (
+      <section id="compare" className="panel compare-panel">
         <h2>Compare Locations</h2>
 
         <div className="compare-selected">
@@ -300,11 +557,21 @@ function App() {
             <strong>
               {leftCompare ? getLocationLabel(leftCompare) : "Not selected"}
             </strong>
+            {leftCompare && (
+              <button className="remove-button" onClick={() => removeCompareLocation("left")}>
+                ×
+              </button>
+            )}
           </div>
 
           <div>
             <span className="card-label">Location B</span>
             <strong>{rightCompare ? getLocationLabel(rightCompare) : "Not selected"}</strong>
+            {rightCompare && (
+              <button className="remove-button" onClick={() => removeCompareLocation("right")}>
+                ×
+              </button>
+            )}
           </div>
         </div>
 
@@ -313,7 +580,7 @@ function App() {
           onClick={compareSelectedLocations}
           disabled={isComparing}
         >
-          {isComparing ? "Comparng..." : "Compare Selected Locatons"}
+          {isComparing ? "Comparing..." : "Compare Selected Locations"}
         </button>
 
         {comparison && (
@@ -362,6 +629,8 @@ function App() {
           </div>
         )}
       </section>
+      )}
+      </div>
     </main>
   );
 }
