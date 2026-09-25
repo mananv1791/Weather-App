@@ -1,6 +1,66 @@
 import axios from "axios";
 import { cache } from "./cacheService";
 
+export type ForecastModel = 
+| "best_match"
+| "ecmwf_ifs"
+| "ncep_gfs_global"
+| "cmc_gem_seamless"
+| "icon_seamless";
+
+export const MODEL_LABELS: Record<ForecastModel, string> = {
+    best_match: "Best Match",
+    ecmwf_ifs: "ECMWF IFS",
+    ncep_gfs_global: "NOAA GFS",
+    cmc_gem_seamless: "Canadian GEM",
+    icon_seamless:"DWD ICON"
+};
+
+export async function getModelForecast(
+    latitude: number,
+    longitude: number,
+    model: ForecastModel
+) {
+    const cacheKey = `model:${model}:${latitude.toFixed(4)}:${longitude.toFixed(4)}`
+
+    const cachedForcast = cache.get(cacheKey);
+
+    if(cachedForcast) {
+        return cachedForcast;
+    }
+
+    const response = await axios.get("https://api.open-meteo.com/v1/forecast", {
+        params: {
+            latitude,
+            longitude,
+            models: model,
+            hourly: [
+                "temperature_2m",
+                "precipitation_probability",
+                "wind_speed_10m"
+            ].join(","),
+            timezone: "auto",
+            forecast_days: 2
+        }
+    });
+
+    const forecast = {
+        model,
+        label: MODEL_LABELS[model],
+        timezone: response.data.timezone,
+        hourly: {
+            time: response.data.hourly.time.slice(0,24),
+            temperature: response.data.hourly.temperature_2m.slice(0,24),
+            precipitationProbability:response.data.hourly.precipitation_probability.slice(0, 24),
+            windSpeed: response.data.hourly.wind_speed_10m.slice(0,24)
+        }
+    };
+
+    cache.set(cacheKey, forecast, 10*60);
+
+    return forecast;
+}
+
 export async function searchLocations(query: string){
     const normalizedQuery = query.trim().toLowerCase();
     const cacheKey = `locations:${normalizedQuery}`;

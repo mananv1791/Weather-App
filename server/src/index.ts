@@ -1,11 +1,15 @@
 import express from "express";
 import cors from "cors";
-import { getWeather, searchLocations } from "./services/openMeteoService";
 import { buildWeatherDecision } from "./services/decisionEngine";
 import { compareCities } from "./services/comparisonService";
 import { compareCoordinates } from "./services/comparisonService";
 import rateLimit from "express-rate-limit";
-import { error } from "node:console";
+import {
+    getModelForecast,
+    getWeather,
+    searchLocations,
+    type ForecastModel
+} from "./services/openMeteoService";
 
 const app = express();
 const PORT = 4000;
@@ -140,6 +144,39 @@ app.get("/api/compare/coordinates", async (req, res) => {
     console.log(error);
     res.status(500).json({ error: "Failed to compare coordinates" });
   }
+});
+
+app.get("/api/models/compare", async(req, res) => {
+    try{
+        const latitude = Number(req.query.lat);
+        const longitude = Number(req.query.lon);
+
+        const requestedModels = String(
+            req.query.models || "best_match, ecmwf_ifs, ncep_gfs_global"
+        )
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean) as ForecastModel[];
+
+        if(Number.isNaN(latitude) || Number.isNaN(longitude)) {
+            return res.status(400).json({error: "Valid lat and lon are required"});
+        }
+
+        const forecasts = await Promise.all(
+            requestedModels.map((model) =>
+                getModelForecast(latitude, longitude, model)
+            )
+        );
+
+        res.json({
+            latitude,
+            longitude,
+            models: forecasts
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({error: "Failed to compare forecast models"});
+    }
 });
 
 app.listen(PORT, () => {
