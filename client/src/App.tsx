@@ -1,6 +1,12 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useState } from "react";
 import "./App.css";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV
+    ? "http://localhost:4000"
+    : "https://weather-app-zzn1.onrender.com");
+
 type Location = {
   id: number;
   name: string;
@@ -152,7 +158,7 @@ function App() {
       setError("");
 
       const response = await fetch(
-        `http://localhost:4000/api/locations/search?q=${encodeURIComponent(trimmedQuery)}`
+        `${API_BASE_URL}/api/locations/search?q=${encodeURIComponent(trimmedQuery)}`
       );
 
       if (!response.ok) {
@@ -232,7 +238,7 @@ function App() {
       setError("");
 
       const response = await fetch(
-        `http://localhost:4000/api/decision?lat=${location.latitude}&lon=${location.longitude}`
+        `${API_BASE_URL}/api/decision?lat=${location.latitude}&lon=${location.longitude}`
       );
 
       if (!response.ok) {
@@ -268,7 +274,7 @@ function App() {
         "ncep_gfs_global"
       ].join(",");
 
-      const response = await fetch(`http://localhost:4000/api/models/compare?lat=${location.latitude}&lon=${location.longitude}&models=${models}`);
+      const response = await fetch(`${API_BASE_URL}/api/models/compare?lat=${location.latitude}&lon=${location.longitude}&models=${models}`);
 
       if (!response.ok) {
         throw new Error("Failed to compare forecast models.");
@@ -308,7 +314,7 @@ function App() {
       });
 
       const response = await fetch(
-        `http://localhost:4000/api/compare/coordinates?${params.toString()}`
+        `${API_BASE_URL}/api/compare/coordinates?${params.toString()}`
       );
 
       if(!response.ok){
