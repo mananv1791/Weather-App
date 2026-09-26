@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import "dotenv/config";
 import { buildWeatherDecision } from "./services/decisionEngine";
 import { compareCities } from "./services/comparisonService";
 import { compareCoordinates } from "./services/comparisonService";
@@ -12,9 +13,13 @@ import {
 } from "./services/openMeteoService";
 
 const app = express();
-const PORT = 4000;
+const PORT = Number(process.env.PORT) || 4000;
+const allowedOrigins = process.env.CLIENT_ORIGIN
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-app.use(cors());
+app.use(allowedOrigins?.length ? cors({ origin: allowedOrigins }) : cors());
 app.use(express.json());
 
 const apiLimiter = rateLimit({
@@ -180,5 +185,5 @@ app.get("/api/models/compare", async(req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
