@@ -1,0 +1,18 @@
+{
+  "name": "Weather Decision Assistant",
+  "short_name": "Weather Assistant",
+  "description": "Decision-focused weather forecasts and forecast model comparisons.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#f7f9fc",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/weather-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

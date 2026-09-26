@@ -38,6 +38,50 @@ app.get("/health", (_req, res) => {
     res.json({status: "ok" });
 });
 
+app.get("/api/widget", async (req, res) => {
+    try {
+        const latitude = Number(req.query.lat);
+        const longitude = Number(req.query.lon);
+        const locationName = String(req.query.name || "Selected location");
+
+        if(!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            return res.status(400).json({
+                error: "Valid lat and lon are required"
+            });
+        }
+
+        const weather = await getWeather(latitude, longitude);
+        const decision = buildWeatherDecision(weather);
+
+        res.json({
+            location: {
+                name: locationName,
+                latitude,
+                longitude
+            },
+            current: {
+                temperature: weather.current.temperature_2m,
+                feelsLike: weather.current.apparent_temperature,
+                windSpeed: weather.current.wind_speed_10m,
+                rainProbability: decision.conditions.rainProbability
+            },
+            decision: {
+                summary: decision.summary,
+                outdoorScore: decision.outdoor.score,
+                bestWindow: decision.outdoor.bestWindow,
+                umbrellaNeeded: decision.umbrella.needed
+            },
+            updatedAt: new Date().toISOString()
+        });
+    } catch(error) {
+        console.error(error);
+
+        res.status(500).json({
+            error: "Failed to load widget weather"
+        });
+    }
+});
+
 app.get("/api/locations/search", async(req, res)=> {
     try {
         const query = String(req.query.q || "");

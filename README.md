@@ -20,6 +20,10 @@ The project currently includes:
 - API rate limiting
 - In-memory response caching for weather and geocoding requests
 - Basic health check endpoint
+- Environment-based API and server configuration for deployment
+- Installable PWA shell for Android and desktop browsers
+- GitHub Actions build verification and Dependabot configuration
+- Vercel Web Analytics integration for page-view metrics
 - Separate `client` and `server` project structure
 
 ## Tech Stack
@@ -56,6 +60,7 @@ WEATHER-APP/
     src/
     package.json
     vite.config.ts
+    .env.example
 
   server/
     src/
@@ -67,6 +72,7 @@ WEATHER-APP/
         openMeteoService.ts
     package.json
     tsconfig.json
+    .env.example
 ```
 
 ## Getting Started
@@ -91,6 +97,24 @@ Install backend dependencies:
 cd ../server
 npm install
 ```
+
+## Environment Variables
+
+The frontend reads the backend URL from `VITE_API_BASE_URL`. In local development it defaults to `http://localhost:4000`; in production it defaults to the deployed Render API unless this variable is provided. Copy the example file before running locally:
+
+```bash
+cd client
+cp .env.example .env
+```
+
+The backend supports these variables:
+
+```env
+PORT=4000
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+`CLIENT_ORIGIN` may contain a comma-separated list when the deployed frontend has more than one allowed origin.
 
 ## Running The App Locally
 
@@ -118,6 +142,41 @@ The frontend runs on:
 
 ```txt
 http://localhost:5173
+```
+
+## Production Build
+
+Build the frontend:
+
+```bash
+cd client
+npm run build
+```
+
+Build and start the backend:
+
+```bash
+cd server
+npm run build
+npm start
+```
+
+For a free deployment, host the frontend on Vercel or Cloudflare Pages and the backend as a Render Web Service. Set the frontend's `VITE_API_BASE_URL` to the deployed backend URL, and set the backend's `CLIENT_ORIGIN` to the deployed frontend URL. Free backend instances may sleep when unused, so the first request after inactivity can take longer.
+
+### Render Blueprint
+
+The repository includes `render.yaml`, so Render can detect the backend settings automatically. After creating the service, set:
+
+```env
+CLIENT_ORIGIN=https://your-frontend-url.vercel.app
+```
+
+### Vercel Settings
+
+Set the Vercel project root directory to `client`, then add:
+
+```env
+VITE_API_BASE_URL=https://your-backend-url.onrender.com
 ```
 
 ## API Endpoints
@@ -316,6 +375,17 @@ Planned features include:
 - [ ] Add favorite locations
 - [ ] Add search history
 - [ ] Add scheduled daily summaries
+
+### Phase 6: Release Readiness
+
+- [x] Add production build and start scripts
+- [x] Add environment-based frontend API URL
+- [x] Add health endpoint for hosting providers
+- [x] Add installable PWA metadata and service worker
+- [x] Add GitHub Actions CI workflow
+- [x] Add Dependabot configuration
+- [ ] Deploy backend and frontend publicly
+- [ ] Add offline forecast fallback and install instructions
 
 ## Frontend Workflow
 
